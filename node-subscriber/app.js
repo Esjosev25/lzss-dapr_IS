@@ -10,11 +10,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+require('dotenv').config();
 const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
 const lzbase62 = require('lzbase62');
+const textModel = require('./models/text-compressed.models');
 const app = express();
+const { connectDB } = require('./config/dbConnect');
 // Dapr publishes messages with the application/cloudevents+json content-type
 app.use(bodyParser.json({ type: 'application/*+json' }));
 
@@ -23,7 +26,7 @@ const port = 3000;
 const daprPort = process.env.DAPR_HTTP_PORT ?? 3500;
 const daprUrl = `http://localhost:${daprPort}/v1.0`;
 const pubsubName = 'pubsub';
-
+connectDB();
 app.get('/dapr/subscribe', (_req, res) => {
     res.json([
       {
@@ -54,18 +57,26 @@ app.post('/B', (req, res) => {
     res.sendStatus(200);
 });
 
-app.post('/Compress',async (req, res) => {
+app.post('/Compress', async (req, res) => {
   //Imprime mensaje compreso
-  console.log('Compress: ', req.body.data.message);
-  var compressed = lzbase62.compress(req.body.data.message);
+  var text = req.body.data.message;
+  console.log('Compress: ', text);
+  var compressed = await lzbase62.compress(text);
   const newBody = {
     messageType: 'resultado',
     message: compressed,
   };
-   console.log('Compress: ', compressed);
-  //publicar en resultado
- // console.log("Publishing: ", req.body);
-   await axios.post(`${daprUrl}/publish/${pubsubName}/resultado`, newBody);
+  console.log('Compress: ', compressed);
+  await saveInDB(text, compressed);
+  await axios.post(`${daprUrl}/publish/${pubsubName}/resultado`, newBody);
   res.sendStatus(200);
 });
+
+const saveInDB=async (text, compressed)=>{
+const textDB = new textModel({
+  text,
+  compressedText: compressed,
+});
+await textDB.save();
+}
 app.listen(port, () => console.log(`Node App listening on port ${port}!`));
