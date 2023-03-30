@@ -61,7 +61,7 @@ export class MessageForm extends React.Component {
             <option value="A">A</option>
             <option value="B">B</option>
             <option value="C">C</option>
-            <option value="Compress">Compress</option>
+            <option value="CheckText">Compress</option>
           </select>
         </div>
         <div className="form-group">

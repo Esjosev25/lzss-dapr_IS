@@ -28,35 +28,60 @@ const daprUrl = `http://localhost:${daprPort}/v1.0`;
 const pubsubName = 'pubsub';
 connectDB();
 app.get('/dapr/subscribe', (_req, res) => {
-    res.json([
-      {
-        pubsubname: 'pubsub',
-        topic: 'A',
-        route: 'A',
-      },
-      {
-        pubsubname: 'pubsub',
-        topic: 'B',
-        route: 'B',
-      },
-      {
-        pubsubname: 'pubsub',
-        topic: 'Compress',
-        route: 'Compress',
-      },
-    ]);
+  res.json([
+    {
+      pubsubname: 'pubsub',
+      topic: 'A',
+      route: 'A',
+    },
+    {
+      pubsubname: 'pubsub',
+      topic: 'B',
+      route: 'B',
+    },
+    {
+      pubsubname: 'pubsub',
+      topic: 'Compress',
+      route: 'Compress',
+    },
+    {
+      pubsubname: 'pubsub',
+      topic: 'CheckText',
+      route: 'CheckText',
+    }
+  ]);
 });
 
 app.post('/A', (req, res) => {
-    console.log("A: ", req.body.data.message);
-    res.sendStatus(200);
+  console.log('A: ', req.body.data.message);
+  res.sendStatus(200);
 });
 
 app.post('/B', (req, res) => {
-    console.log("B: ", req.body.data.message);
-    res.sendStatus(200);
+  console.log('B: ', req.body.data.message);
+  res.sendStatus(200);
 });
-
+app.post('/CheckText', async (req, res) => {
+  const { message } = req.body.data;
+  console.log('CheckText: ', message);
+  let newBody = {};
+  const palabraProhibida = 'ingeniero';
+  
+  if (message && message.toLowerCase().includes(palabraProhibida)) {
+    newBody.messageType = 'rechazo';
+    newBody.message = 'Se rechazo la solicitud por escribir un token prohibido';
+    await axios.post(`${daprUrl}/publish/${pubsubName}/rechazo`, newBody);
+    return res.sendStatus(200);
+  } else if (message) {
+    console.log("NO RECHAZO")
+    newBody.messageType = 'Compress';
+    newBody.message = message;
+    await axios.post(`${daprUrl}/publish/${pubsubName}/Compress`, newBody);
+    return res.sendStatus(200);
+  }
+  console.log("fallo")
+  return res.sendStatus(200);
+});
 app.post('/Compress', async (req, res) => {
   //Imprime mensaje compreso
   var text = req.body.data.message;
@@ -72,11 +97,11 @@ app.post('/Compress', async (req, res) => {
   res.sendStatus(200);
 });
 
-const saveInDB=async (text, compressed)=>{
-const textDB = new textModel({
-  text,
-  compressedText: compressed,
-});
-await textDB.save();
-}
+const saveInDB = async (text, compressed) => {
+  const textDB = new textModel({
+    text,
+    compressedText: compressed,
+  });
+  await textDB.save();
+};
 app.listen(port, () => console.log(`Node App listening on port ${port}!`));
